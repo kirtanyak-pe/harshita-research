@@ -7,22 +7,24 @@
 <title>Private</title>
 <link rel="icon" href="/harshita-research/favicon.svg">
 <style>
-:root { --bg: #F7F4EE; --surface: #FFFFFF; --text: #1C1B22; --text-2: #5E5C66; --line: #E2DED6; --accent: #2F6F6A; --on-accent: #FFFFFF; --error: #B3261E; }
-@media (prefers-color-scheme: dark) { :root { --bg: #1C1B22; --surface: #26252D; --text: #EDEBF2; --text-2: #A9A6B3; --line: #3A3842; --accent: #7CC7BE; --on-accent: #10201E; --error: #F2B8B5; } }
+:root { --bg: #F6F5F3; --surface: #FFFFFF; --text: #121212; --text-2: #5E5D5B; --line: #E4E4E2; --accent: #177568; --error: #B3261E;
+  --shadow: 0 0 0 1px rgba(0,0,0,.04), 0 12px 40px rgba(10,31,20,.08); }
+@media (prefers-color-scheme: dark) { :root { --bg: #141414; --surface: #1E1E1E; --text: #F2F2F0; --text-2: #A3A29F; --line: #333331; --accent: #3CC2AE; --error: #F2B8B5;
+  --shadow: 0 0 0 1px rgba(255,255,255,.08), 0 16px 48px rgba(0,0,0,.5); } }
 * { box-sizing: border-box; }
 html, body { margin: 0; height: 100%; }
-body { background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; display: grid; place-items: center; padding: 16px; }
-main { width: 100%; max-width: 360px; }
-h1 { font-size: 22px; font-weight: 650; margin: 0 0 6px; letter-spacing: -0.01em; }
-p { margin: 0 0 20px; color: var(--text-2); font-size: 15px; }
-label { display: block; font-size: 14px; font-weight: 550; margin-bottom: 6px; }
-input { width: 100%; font: inherit; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+body { background: var(--bg); color: var(--text); font: 16px/1.5 Inter, system-ui, -apple-system, "Segoe UI", sans-serif; display: grid; place-items: center; padding: 16px; }
+main { width: 100%; max-width: 400px; padding: 32px 28px 24px; border-radius: 28px; background: var(--surface); box-shadow: var(--shadow); }
+h1 { font: 500 28px/1.1 "Source Serif 4", "Iowan Old Style", Georgia, serif; margin: 0 0 8px; letter-spacing: -0.02em; }
+p { margin: 0 0 24px; color: var(--text-2); font-size: 15px; }
+label { display: block; font-size: 14px; font-weight: 600; margin-bottom: 6px; }
+input { width: 100%; font: inherit; padding: 12px 18px; border-radius: 999px; border: 1px solid var(--line); background: var(--bg); color: var(--text); }
 input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
-button { width: 100%; margin-top: 12px; font: inherit; font-weight: 600; padding: 12px; border: 0; border-radius: 10px; background: var(--accent); color: var(--on-accent); cursor: pointer; }
+button { width: 100%; margin-top: 12px; font: inherit; font-weight: 500; padding: 12px; border: 0; border-radius: 999px; background: var(--text); color: var(--surface); cursor: pointer; }
 button[disabled] { opacity: 0.6; cursor: progress; }
 .msg { min-height: 1.5em; margin: 10px 0 0; font-size: 14px; color: var(--error); }
 html.checking main { visibility: hidden; }
-.icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); color: var(--accent); margin-bottom: 16px; }
+.icon { width: 44px; height: 44px; border-radius: 999px; display: grid; place-items: center; background: var(--bg); color: var(--accent); margin-bottom: 20px; }
 </style>
 </head>
 <body>
