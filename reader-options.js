@@ -65,7 +65,7 @@
     ],
 
     defaults: function () {
-      return { theme: 'auto', accent: 'theme', font: 'inter', size: 3,
+      return { theme: 'auto', accent: 'blue', font: 'inter', size: 3,
                leading: 'normal', width: 'medium', align: 'left', weight: 'regular' };
     },
     read: function () {
@@ -73,7 +73,10 @@
       try {
         var saved = JSON.parse(localStorage.getItem('rs-reader') || '{}');
         for (var k in saved) s[k] = saved[k];
+        // blue became the default accent; move older saved 'theme' picks over once
+        if (saved.av !== 2 && s.accent === 'theme') s.accent = 'blue';
       } catch (e) {}
+      s.av = 2;
       if (!(s.size >= 0 && s.size < O.sizes.length)) s.size = 3;
       return s;
     },
