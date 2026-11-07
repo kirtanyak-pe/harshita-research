@@ -96,7 +96,8 @@ async function openHere({ key, nameKey }) {
   // a folder without its slash: relative links need it
   if (!p.endsWith('/') && !/\.[a-z0-9]+$/i.test(p.slice(p.lastIndexOf('/')))) { p += '/'; history.replaceState(null, '', p + location.search + location.hash); }
   const page = (await get(p)) || (await get(BASE + '404.html'));
-  if (!page) { msg('This page does not exist.'); return; }
+  // an old or mistyped address: go to the home page rather than stop at an error
+  if (!page) { if (p !== BASE) location.replace(BASE); else msg('This page does not exist.'); return; }
   const sealed = (u) => u.origin === location.origin && u.pathname.startsWith(BASE) && !/\.(js|mjs|css|woff2?|ttf|otf)$/.test(u.pathname) &&
     !/\/(sw\.js|version\.json|manifest\.webmanifest|favicon\.svg)$/.test(u.pathname) && !u.pathname.startsWith(BASE + 'icons/');
   window.fetch = async (input, init) => {
