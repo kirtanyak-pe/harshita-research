@@ -1,0 +1,176 @@
+<!doctype html>
+<html lang="en" class="checking">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="robots" content="noindex, nofollow">
+<title>Private</title>
+<link rel="icon" href="/harshita-research/favicon.svg">
+<style>
+:root { --bg: #F7F4EE; --surface: #FFFFFF; --text: #1C1B22; --text-2: #5E5C66; --line: #E2DED6; --accent: #2F6F6A; --on-accent: #FFFFFF; --error: #B3261E; }
+@media (prefers-color-scheme: dark) { :root { --bg: #1C1B22; --surface: #26252D; --text: #EDEBF2; --text-2: #A9A6B3; --line: #3A3842; --accent: #7CC7BE; --on-accent: #10201E; --error: #F2B8B5; } }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; }
+body { background: var(--bg); color: var(--text); font: 16px/1.5 system-ui, -apple-system, "Segoe UI", sans-serif; display: grid; place-items: center; padding: 16px; }
+main { width: 100%; max-width: 360px; }
+h1 { font-size: 22px; font-weight: 650; margin: 0 0 6px; letter-spacing: -0.01em; }
+p { margin: 0 0 20px; color: var(--text-2); font-size: 15px; }
+label { display: block; font-size: 14px; font-weight: 550; margin-bottom: 6px; }
+input { width: 100%; font: inherit; padding: 12px 14px; border-radius: 10px; border: 1px solid var(--line); background: var(--surface); color: var(--text); }
+input:focus { outline: 2px solid var(--accent); outline-offset: 1px; border-color: transparent; }
+button { width: 100%; margin-top: 12px; font: inherit; font-weight: 600; padding: 12px; border: 0; border-radius: 10px; background: var(--accent); color: var(--on-accent); cursor: pointer; }
+button[disabled] { opacity: 0.6; cursor: progress; }
+.msg { min-height: 1.5em; margin: 10px 0 0; font-size: 14px; color: var(--error); }
+html.checking main { visibility: hidden; }
+.icon { width: 40px; height: 40px; border-radius: 12px; display: grid; place-items: center; background: var(--surface); border: 1px solid var(--line); color: var(--accent); margin-bottom: 16px; }
+</style>
+</head>
+<body>
+<main>
+  <div class="icon" aria-hidden="true"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><rect x="4" y="10" width="16" height="11" rx="2.5"/><path d="M8 10V7a4 4 0 0 1 8 0v3"/></svg></div>
+  <h1>This site is private</h1>
+  <p>Enter the password to read it. This device will remember it.</p>
+  <form id="f">
+    <label for="pw">Password</label>
+    <input id="pw" type="password" autocomplete="current-password" required autofocus>
+    <button id="go" type="submit">Unlock</button>
+    <div class="msg" id="msg" role="alert"></div>
+  </form>
+  <noscript><p>This site needs JavaScript to unlock.</p></noscript>
+</main>
+<script>
+const CFG = {"base":"/harshita-research/","salt":"pn9D/y2yrxlTyMNShTNCVw==","iter":600000,"check":"DcGnWPs3iVdyynAKYv3VJVKi4Ia5rtePLFDqqMFVV3SIUlamoYTZxjFb7RTp/blhEPU3xM8=","keyId":"ZIFG_JJOlUENsKah"};
+const BASE = CFG.base;
+
+const idb = (mode, fn) => new Promise((res, rej) => {
+  const o = indexedDB.open('hr-lock', 1);
+  o.onupgradeneeded = () => o.result.createObjectStore('kv');
+  o.onerror = () => rej(o.error);
+  o.onsuccess = () => {
+    const t = o.result.transaction('kv', mode), r = fn(t.objectStore('kv'));
+    t.oncomplete = () => res(r && r.result); t.onerror = () => rej(t.error);
+  };
+});
+const hex = (b) => [...new Uint8Array(b)].map((x) => x.toString(16).padStart(2, '0')).join('');
+/* where a path's encrypted copy is stored: x/<HMAC of the path below BASE> */
+async function nameOf(nameKey, pathname) {
+  let rel = decodeURIComponent(pathname.slice(BASE.length));
+  if (rel === '' || rel.endsWith('/')) rel += 'index.html';
+  return BASE + 'x/' + hex(await crypto.subtle.sign('HMAC', nameKey, new TextEncoder().encode(rel))).slice(0, 32);
+}
+const b64 = (s) => Uint8Array.from(atob(s), (c) => c.charCodeAt(0));
+const msg = (t) => { document.getElementById('msg').textContent = t; };
+const sw = 'serviceWorker' in navigator ? navigator.serviceWorker.register(BASE + 'sw.js', { scope: BASE, updateViaCache: 'none' }) : null;
+sw?.catch(() => {});
+const getRec = () => idb('readonly', (s) => s.get('key')).then((r) => (r && r.id === CFG.keyId && r.nameKey ? r : null)).catch(() => null);
+
+/* the locked worker answers 'ping'; an older worker does not. Asks the
+   registered worker, not this page's controller: a hard reload has none */
+function ping(reg) {
+  const c = reg.active;
+  if (!c) return Promise.resolve(false);
+  return new Promise((res) => {
+    const ch = new MessageChannel();
+    ch.port1.onmessage = (e) => res(e.data === CFG.keyId);
+    c.postMessage('ping', [ch.port2]);
+    setTimeout(() => res(false), 500);
+  });
+}
+async function ready() {
+  const reg = await sw?.catch(() => null);
+  if (!reg) return false;
+  reg.update().catch(() => {});
+  for (let i = 0; i < 40; i++) { if (await ping(reg)) return true; await new Promise((r) => setTimeout(r, 250)); }
+  return false;
+}
+/* No service worker (some in-app and private browsers): open the page here.
+   fetch is wrapped so the page's own requests for encrypted files (search
+   index, PDFs through links) find and decrypt them too. */
+async function openHere({ key, nameKey }) {
+  const dec = (buf) => crypto.subtle.decrypt({ name: 'AES-GCM', iv: buf.slice(0, 12) }, key, buf.slice(12));
+  const plainFetch = window.fetch.bind(window);
+  const get = async (p) => { const r = await plainFetch(await nameOf(nameKey, p), { cache: 'no-cache' }); return r.ok ? dec(await r.arrayBuffer()) : null; };
+  let p = location.pathname;
+  // a folder without its slash: relative links need it
+  if (!p.endsWith('/') && !/\.[a-z0-9]+$/i.test(p.slice(p.lastIndexOf('/')))) { p += '/'; history.replaceState(null, '', p + location.search + location.hash); }
+  const page = (await get(p)) || (await get(BASE + '404.html'));
+  if (!page) { msg('This page does not exist.'); return; }
+  const sealed = (u) => u.origin === location.origin && u.pathname.startsWith(BASE) && !/\.(js|mjs|css|woff2?|ttf|otf)$/.test(u.pathname) &&
+    !/\/(sw\.js|version\.json|manifest\.webmanifest|favicon\.svg)$/.test(u.pathname) && !u.pathname.startsWith(BASE + 'icons/');
+  window.fetch = async (input, init) => {
+    const u = new URL(typeof input === 'string' ? input : input.url, location.href);
+    if (!sealed(u)) return plainFetch(input, init);
+    const body = await get(u.pathname).catch(() => null);
+    return new Response(body, { status: body ? 200 : 404 });
+  };
+  const typeOf = (p) => (/\.pdf$/i.test(p) ? 'application/pdf' : /\.svg$/i.test(p) ? 'image/svg+xml' : '');
+  // links to encrypted files (PDFs, zips) open as decrypted copies
+  addEventListener('click', async (ev) => {
+    const a = ev.target.closest && ev.target.closest('a[href]');
+    if (!a || ev.defaultPrevented) return;
+    const u = new URL(a.href, location.href);
+    if (!sealed(u) || !/\.[a-z0-9]+$/i.test(u.pathname) || /\.html$/.test(u.pathname)) return;
+    ev.preventDefault();
+    const res = await window.fetch(u.href);
+    const blob = URL.createObjectURL(new Blob([await res.arrayBuffer()], { type: typeOf(u.pathname) || 'application/octet-stream' }));
+    const dl = document.createElement('a');
+    dl.href = blob; dl.target = '_blank';
+    if (a.hasAttribute('download') || !/\.pdf$/i.test(u.pathname)) dl.download = a.getAttribute('download') || decodeURIComponent(u.pathname.split('/').pop());
+    dl.click();
+  }, true);
+  // images in the page are encrypted files too
+  const images = () => document.querySelectorAll('img[src]').forEach(async (img) => {
+    const u = new URL(img.src, location.href);
+    if (!sealed(u)) return;
+    const b = await get(u.pathname).catch(() => null);
+    if (b) img.src = URL.createObjectURL(new Blob([b], { type: typeOf(u.pathname) }));
+  });
+  document.open(); document.write(new TextDecoder().decode(page)); document.close();
+  images();
+}
+async function enter(rec) {
+  if (!(await ready())) return openHere(rec);
+  // a page that reloads into this one again means the worker could not open it
+  const n = +(sessionStorage.getItem('hr-lock-tries') || 0);
+  if (n > 2) { sessionStorage.removeItem('hr-lock-tries'); msg('Could not open the page. Try again in a moment.'); return; }
+  sessionStorage.setItem('hr-lock-tries', String(n + 1));
+  location.reload();
+}
+
+(async () => {
+  if (!window.crypto?.subtle) { msg('This browser cannot open the site. Try a current Chrome, Safari or Firefox.'); return; }
+  const rec = await getRec();
+  if (rec) await enter(rec).catch(() => {});
+})().finally(() => document.documentElement.classList.remove('checking'));
+
+document.getElementById('f').addEventListener('submit', async (ev) => {
+  ev.preventDefault();
+  const go = document.getElementById('go');
+  go.disabled = true; msg('');
+  let rec, stored;
+  try {
+    const pw = await crypto.subtle.importKey('raw', new TextEncoder().encode(document.getElementById('pw').value), 'PBKDF2', false, ['deriveBits']);
+    const bits = await crypto.subtle.deriveBits({ name: 'PBKDF2', salt: b64(CFG.salt), iterations: CFG.iter, hash: 'SHA-256' }, pw, 512);
+    const key = await crypto.subtle.importKey('raw', bits.slice(0, 32), 'AES-GCM', false, ['decrypt']);
+    const nameKey = await crypto.subtle.importKey('raw', bits.slice(32), { name: 'HMAC', hash: 'SHA-256' }, false, ['sign']);
+    const c = b64(CFG.check);
+    const out = new TextDecoder().decode(await crypto.subtle.decrypt({ name: 'AES-GCM', iv: c.subarray(0, 12) }, key, c.subarray(12)));
+    if (out !== 'unlocked:' + CFG.keyId) throw 0;
+    rec = { id: CFG.keyId, key, nameKey };
+    // without storage (some private windows) the worker cannot see the keys: open here
+    stored = await idb('readwrite', (s) => s.put(rec, 'key')).then(() => true, () => false);
+    sessionStorage.removeItem('hr-lock-tries');
+  } catch {
+    msg('That password is not right.');
+    document.getElementById('pw').select();
+    go.disabled = false;
+    return;
+  }
+  try { await (stored ? enter(rec) : openHere(rec)); } catch {
+    msg('Could not open the page. Reload and try again.');
+  }
+  go.disabled = false;
+});
+</script>
+</body>
+</html>
